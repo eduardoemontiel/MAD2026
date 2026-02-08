@@ -1,8 +1,14 @@
 # MAD2026
 
 ## Workspace
+Github:
+  - Repository:
+  - Releases:
 
-## Description
+Workspace:
+
+## Description:
+Aplicacion hello world inicial
 
 ## Screenshots and navigation
 
@@ -13,3 +19,6 @@
 ## How to Use
 
 ## Participants
+List of MAD developers:
+ - Eduardo Enrique Montiel Rios:
+ - Miguel Rodríguez de la Huerga: 
