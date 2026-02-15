@@ -12,11 +12,8 @@ Esta aplicación muestra un mensaje de bienvenida personalizado para Miguel y Ed
 
 
 ## Screenshots and navigation
-Pantalla inicial
 ![WhatsApp Image 2026-02-15 at 10 32 40 PM](https://github.com/user-attachments/assets/f37f4f2f-bcb7-40f3-9957-bcdc50ec49b6)
-Pantalla secundaria
 ![WhatsApp Image 2026-02-15 at 10 32 53 PM](https://github.com/user-attachments/assets/7a4bb65e-6547-428b-a696-7264732ec666)
-Pantalla terciaria
 ![WhatsApp Image 2026-02-15 at 10 33 04 PM](https://github.com/user-attachments/assets/211eff22-0c3d-4854-bf02-e2369c9047e4)
 
 
