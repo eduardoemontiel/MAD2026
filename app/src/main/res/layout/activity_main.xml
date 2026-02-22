@@ -3,11 +3,12 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center_horizontal"> <TextView
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:text="página principal"
-    android:padding="20dp" />
+    android:gravity="center_horizontal">
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="página principal"
+        android:padding="20dp" />
 
     <Button
         android:id="@+id/btnGoToList"
@@ -23,9 +24,10 @@
         android:layout_weight="1" />
 
     <TextView
+        android:id="@+id/mainTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World Miguel y Edu!"
+        android:text="Esperando GPS..."
         android:textSize="24sp"
         android:textStyle="bold" />
 
