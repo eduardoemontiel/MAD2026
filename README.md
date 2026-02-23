@@ -8,11 +8,18 @@ Github:
 Workspace: https://upm365.sharepoint.com/:u:/s/mad2026MiEd/IQA9UV7RhJthSZ7tt2sjsPw4AX4WyNn1B7g10JZo5kTtkQA?e=45IwG5
 
 ## Description:
-Esta aplicación muestra un mensaje de bienvenida personalizado para Miguel y Edu. Permite navegar secuencialmente entre tres pantallas distintas utilizando botones para avanzar de actividad y ofrece una opción final para regresar a la pantalla anterior.
+Esta aplicación muestra un mensaje de bienvenida personalizado para Miguel y Edu. Pide permiso para acceder a la ubicación, posteriormente calculando las coordenadas especificas para su uso proximamente. Permite navegar secuencialmente entre tres pantallas distintas utilizando botones para avanzar de actividad y ofrece una opción final para regresar a la pantalla anterior.
 
 
 ## Screenshots and navigation
-![WhatsApp Image 2026-02-15 at 10 32 40 PM](https://github.com/user-attachments/assets/f37f4f2f-bcb7-40f3-9957-bcdc50ec49b6)
+![WhatsApp Image 2026-02-23 at 7 44 58 PM](https://github.com/user-attachments/assets/36b00c5b-5291-4ae8-af33-c17ffbda8cec)
+![WhatsApp Image 2026-02-23 at 7 45 12 PM](https://github.com/user-attachments/assets/6273edcf-a2af-4a44-b089-53e3742faae1)
+![WhatsApp Image 2026-02-23 at 7 45 25 PM](https://github.com/user-attachments/assets/4cd4076d-e1ca-45cd-9a61-ab0abe006e6c)
+
+
+
+
+
 ![WhatsApp Image 2026-02-15 at 10 32 53 PM](https://github.com/user-attachments/assets/7a4bb65e-6547-428b-a696-7264732ec666)
 ![WhatsApp Image 2026-02-15 at 10 33 04 PM](https://github.com/user-attachments/assets/211eff22-0c3d-4854-bf02-e2369c9047e4)
 
@@ -20,14 +27,17 @@ Esta aplicación muestra un mensaje de bienvenida personalizado para Miguel y Ed
 
 ## Demo Video
 Short video demonstrating how the app works and all the features:
-[Grabando-20260215_223128.webm](https://upm365-my.sharepoint.com/:v:/g/personal/miguel_rdelahuerga_alumnos_upm_es/IQCLnIfTe3EWTb5vcLHiGGBKAaRkjt3Byov780WigJnFGgQ?e=rRO6gG&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D)
+https://upm365-my.sharepoint.com/:v:/g/personal/miguel_rdelahuerga_alumnos_upm_es/IQAAjRws3AGJQagkcqPSXat2AeOyiwWQ9pGDjV94ymuNz8E?e=rNHbiz&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D
+
 
 ## Features
-**Pantalla de Bienvenida:** Muestra un saludo personalizado a los desarrolladores ("Hello World Miguel y Edu!").
+**Pantalla de Bienvenida:** Enseña ubicación si se ha dado permiso
 **Navegación Multi-pantalla:** Capacidad para transicionar entre la actividad principal, secundaria y terciaria.
 **Controles Interactivos:** Botones funcionales para avanzar o retroceder en el flujo de la aplicación.
+**Obtener coordenadas GPS** Se obtienen las coordenadas longitud y latitud usando el emulador.
+
 ## How to Use
-1.  **Inicio:** Al abrir la aplicación, aterrizarás en la **Página Principal** donde verás el mensaje de bienvenida.
+1.  **Inicio:** Al abrir la aplicación, aterrizarás en la **Página Principal** donde se solicitará permiso a acceder a la ubicación. En el caso de que se de, saldrá por pantalla la longitud y latitud del usuario
 2.  **Navegación:** Pulsa el botón **"GO TO SECOND ACTIVITY"** en la parte superior para cambiar de pantalla.
 3.  **Interacción:** En las siguientes pantallas, encontrarás opciones adicionales:
     * Usa **"GO TO THIRD ACTIVITY"** para avanzar en el flujo.
