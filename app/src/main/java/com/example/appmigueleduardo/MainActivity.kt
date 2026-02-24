@@ -19,6 +19,8 @@ class MainActivity : ComponentActivity(), LocationListener {
     private lateinit var locationManager: LocationManager
     private val locationPermissionCode = 2
 
+    private var latestLocation: Location? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Conecta con tu archivo XML
@@ -44,10 +46,24 @@ class MainActivity : ComponentActivity(), LocationListener {
             startActivity(intent)
             Log.d(TAG, "Botón presionado: Navegando a la lista")
         }
+
+        val buttonOsm: Button = findViewById(R.id.osmButton)
+        buttonOsm.setOnClickListener {
+            if (latestLocation != null) {
+                val intent = Intent(this, OpenStreetMapsActivity::class.java)
+                val bundle = Bundle()
+                bundle.putParcelable("location", latestLocation)
+                intent.putExtra("locationBundle", bundle)
+                startActivity(intent)
+            } else {
+                Log.e(TAG, "Location not set yet.")
+            }
+        }
     }
 
     // Snippet: Métdo que se ejecuta al recibir coordenadas
     override fun onLocationChanged(location: Location) {
+        latestLocation = location
         val textView: TextView = findViewById(R.id.mainTextView) // Asegúrate de que el ID esté en el XML
         textView.text = "Latitude: ${location.latitude}, Longitude: ${location.longitude}"
         Log.d(TAG, "Ubicación: ${location.latitude}, ${location.longitude}")
