@@ -1,47 +1,156 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center_horizontal">
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="página principal"
-        android:padding="20dp" />
-
-    <Button
-        android:id="@+id/btnGoToList"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="GO TO SECOND ACTIVITY"
-        android:backgroundTint="#6200EE"
-        android:textColor="#FFFFFF" />
-
-    <Button
-        android:id="@+id/osmButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="VER MAPA (OSM)"
-        android:backgroundTint="#008577"
-        android:textColor="#FFFFFF" />
-
-    <View
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+    android:padding="24dp"
+    android:background="#F5F5F5">
 
     <TextView
-        android:id="@+id/mainTextView"
+        android:id="@+id/titleTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Esperando GPS..."
-        android:textSize="24sp"
-        android:textStyle="bold" />
+        android:text="PÁGINA PRINCIPAL"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="32dp" />
 
-    <View
+    <LinearLayout
+        android:id="@+id/buttonContainer"
         android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/titleTextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="40dp">
 
-</LinearLayout>
+        <Button
+            android:id="@+id/userIdentifierButton"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="ENTER USER ID"
+            android:backgroundTint="#FF5722"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/btnGoToList"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="GO TO SECOND ACTIVITY"
+            android:backgroundTint="#6200EE"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/osmButton"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="VER MAPA (OSM)"
+            android:backgroundTint="#008577" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/switchContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:background="#E8EAF6"
+        app:layout_constraintTop_toBottomOf="@id/buttonContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="30dp"
+        android:layout_marginHorizontal="8dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Servicio de Localización"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#3F51B5" />
+
+        <Switch
+            android:id="@+id/locationSwitch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/locationDataContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="#E8EAF6"
+        app:layout_constraintTop_toBottomOf="@id/switchContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="12dp"
+        android:layout_marginHorizontal="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <TextView
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:text="Latitud:"
+                android:textStyle="bold"
+                android:textColor="#3F51B5" />
+            <TextView
+                android:id="@+id/tvLat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="---"
+                android:textColor="#3F51B5" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+            <TextView
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:text="Longitud:"
+                android:textStyle="bold"
+                android:textColor="#3F51B5" />
+            <TextView
+                android:id="@+id/tvLon"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="---"
+                android:textColor="#3F51B5" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+            <TextView
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:text="Usuario:"
+                android:textStyle="bold"
+                android:textColor="#3F51B5" />
+            <TextView
+                android:id="@+id/tvUser"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="---"
+                android:textColor="#3F51B5" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
