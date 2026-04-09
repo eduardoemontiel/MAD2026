@@ -5,81 +5,107 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-
-/*class SecondActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_second)
-
-        // Botón para ir al Nivel 3 (Detalle)
-        val btnDetail: Button = findViewById(R.id.btnItem1)
-        btnDetail.setOnClickListener {
-            val intent = Intent(this, ThirdActivity::class.java)
-            startActivity(intent)
-        }
-
-        // Botón para volver al Nivel 1 (Landing)
-        val btnBack: Button = findViewById(R.id.btnBackToMain)
-        btnBack.setOnClickListener {
-            finish() // Cierra esta actividad y vuelve a la anterior
-        }
-    }
-} esto sería si usamos xml como en el resto de pantallas*/
-
-// Así sería con jetpack compose:
+import java.io.IOException
 
 class SecondActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
+            var fileContent by remember { mutableStateOf("Cargando historial...") }
+
+            LaunchedEffect(Unit) {
+                fileContent = readFileContents()
+            }
+
             SecondScreenContent(
+                fileContent = fileContent,
                 onNavigateToThird = {
                     val intent = Intent(this, ThirdActivity::class.java)
                     startActivity(intent)
                 },
-                // 'finish()' cierra esta Activity y nos devuelve a la MainActivity que está debajo en la pila
                 onBack = { finish() }
             )
         }
     }
+
+    private fun readFileContents(): String {
+        val fileName = "gps_coordinates.csv"
+        return try {
+            openFileInput(fileName).bufferedReader().use { reader ->
+                reader.readText() // Lee todo el contenido del archivo
+            }
+        } catch (e: IOException) {
+            "No hay historial de coordenadas todavía."
+        }
+    }
 }
 
-// @Composable: Marca una función que 'dibuja' UI. Es como el sustituto del archivo XML
 @Composable
-fun SecondScreenContent(onNavigateToThird: () -> Unit, onBack: () -> Unit) {
+fun SecondScreenContent(fileContent: String, onNavigateToThird: () -> Unit, onBack: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        color = Color.White
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(24.dp),
+            // Esto centra todo el grupo de elementos verticalmente en la pantalla
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Button(
-                onClick = onNavigateToThird,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE)),
-                modifier = Modifier.fillMaxWidth()
+            Text(
+                text = "HISTORIAL DE RUTAS",
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(bottom = 24.dp),
+                color = Color.Black
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 300.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 8.dp)
             ) {
-                Text(text = "GO TO THIRD ACTIVITY", color = Color.White)
+                Text(
+                    text = fileContent,
+                    color = Color.DarkGray,
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = onNavigateToThird,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(55.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE))
+            ) {
+                Text("GO TO THIRD ACTIVITY")
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             Button(
                 onClick = onBack,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(55.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE))
             ) {
-                Text(text = "GO TO MAIN ACTIVITY", color = Color.White)
+                Text("GO TO MAIN ACTIVITY")
             }
         }
     }
