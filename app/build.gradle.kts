@@ -61,4 +61,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation("org.osmdroid:osmdroid-android:6.1.20")
+    implementation("com.google.android.material:material:1.9.0")
+    implementation("androidx.drawerlayout:drawerlayout:1.1.1")
 }
