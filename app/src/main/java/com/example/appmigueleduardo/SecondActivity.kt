@@ -1,112 +1,135 @@
 package com.example.appmigueleduardo
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import java.io.File
 import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.*
 
-class SecondActivity : ComponentActivity() {
+class SecondActivity : AppCompatActivity(), LocationListener {
+    private lateinit var locationManager: LocationManager
+    private lateinit var adapter: GPSAdapter
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        overridePendingTransition(0, 0)
+        setContentView(R.layout.activity_second)
+        locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
 
-        setContent {
-            var fileContent by remember { mutableStateOf("Cargando historial...") }
-
-            LaunchedEffect(Unit) {
-                fileContent = readFileContents()
+        val navView: BottomNavigationView = findViewById(R.id.nav_view)
+        navView.selectedItemId = R.id.navigation_list
+        navView.setOnNavigationItemSelectedListener { item ->
+            if (item.itemId == navView.selectedItemId) return@setOnNavigationItemSelectedListener true
+            when (item.itemId) {
+                R.id.navigation_home -> {
+                    startActivity(Intent(this, MainActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) })
+                    finish()
+                    true
+                }
+                R.id.navigation_map -> {
+                    startActivity(Intent(this, OpenStreetMapsActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) })
+                    finish()
+                    true
+                }
+                else -> false
             }
+        }
 
-            SecondScreenContent(
-                fileContent = fileContent,
-                onNavigateToThird = {
-                    val intent = Intent(this, ThirdActivity::class.java)
-                    startActivity(intent)
-                },
-                onBack = { finish() }
-            )
+        val data = readFileContents().toMutableList()
+        val recyclerView: RecyclerView = findViewById(R.id.recyclerViewGPS)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        adapter = GPSAdapter(data) { item ->
+            startActivity(Intent(this, ThirdActivity::class.java).apply {
+                putExtra("latitude", item[1]); putExtra("longitude", item[2]); putExtra("altitude", item[3])
+                addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
+            })
+        }
+        recyclerView.adapter = adapter
+
+        if (MainActivity.isGpsEnabledSession) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5f, this)
+            }
         }
     }
 
-    private fun readFileContents(): String {
-        val fileName = "gps_coordinates.csv"
-        return try {
-            openFileInput(fileName).bufferedReader().use { reader ->
-                reader.readText() // Lee todo el contenido del archivo
-            }
-        } catch (e: IOException) {
-            "No hay historial de coordenadas todavía."
+    override fun onLocationChanged(location: Location) {
+        if (!MainActivity.isGpsEnabledSession) return
+
+        val currentTime = System.currentTimeMillis()
+        val distance = MainActivity.lastSavedLocation?.distanceTo(location) ?: Float.MAX_VALUE
+
+        if (currentTime - MainActivity.lastSaveTime > 10000 && distance > 5f) {
+            MainActivity.lastSaveTime = currentTime
+            MainActivity.lastSavedLocation = location
+            saveCoordinatesToFile(location.latitude, location.longitude, location.altitude, currentTime)
+
+            // Refrescar la lista visualmente
+            adapter.updateData(readFileContents())
         }
     }
+
+    private fun saveCoordinatesToFile(lat: Double, lon: Double, alt: Double, time: Long) {
+        val file = File(filesDir, "gps_coordinates.csv")
+        file.appendText("$time; ${String.format("%.4f", lat)}; ${String.format("%.4f", lon)}; ${String.format("%.2f", alt)}\n")
+    }
+
+    private fun readFileContents(): List<List<String>> {
+        val file = File(filesDir, "gps_coordinates.csv")
+        if (!file.exists()) return emptyList()
+        return file.readLines().map { it.split(";").map(String::trim) }
+    }
+
+    override fun onPause() { super.onPause(); locationManager.removeUpdates(this) }
 }
 
-@Composable
-fun SecondScreenContent(fileContent: String, onNavigateToThird: () -> Unit, onBack: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = Color.White
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            // Esto centra todo el grupo de elementos verticalmente en la pantalla
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "HISTORIAL DE RUTAS",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 24.dp),
-                color = Color.Black
-            )
+class GPSAdapter(private var items: List<List<String>>, private val onClick: (List<String>) -> Unit) :
+    RecyclerView.Adapter<GPSAdapter.ViewHolder>() {
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 300.dp)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 8.dp)
-            ) {
-                Text(
-                    text = fileContent,
-                    color = Color.DarkGray,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
+    fun updateData(newItems: List<List<String>>) {
+        this.items = newItems
+        notifyDataSetChanged()
+    }
 
-            Spacer(modifier = Modifier.height(32.dp))
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val tvDate: TextView = view.findViewById(R.id.itemDate)
+        val tvLat: TextView = view.findViewById(R.id.itemLat)
+        val tvLon: TextView = view.findViewById(R.id.itemLon)
+        val tvAlt: TextView = view.findViewById(R.id.itemAlt)
+    }
 
-            Button(
-                onClick = onNavigateToThird,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(55.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE))
-            ) {
-                Text("GO TO THIRD ACTIVITY")
-            }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_gps, parent, false)
+        return ViewHolder(view)
+    }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = onBack,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(55.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE))
-            ) {
-                Text("GO TO MAIN ACTIVITY")
-            }
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val item = items[position]
+        if (item.size >= 4) {
+            val dateStr = try {
+                SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(item[0].toLong()))
+            } catch (e: Exception) { item[0] }
+            holder.tvDate.text = dateStr
+            holder.tvLat.text = item[1]
+            holder.tvLon.text = item[2]
+            holder.tvAlt.text = item[3]
+            holder.itemView.setOnClickListener { onClick(item) }
         }
     }
+    override fun getItemCount() = items.size
 }
