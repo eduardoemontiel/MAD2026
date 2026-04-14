@@ -12,12 +12,19 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import com.example.appmigueleduardo.room.AppDatabase
+import com.example.appmigueleduardo.room.CoordinatesEntity
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import java.io.File
 
 class OpenStreetMapsActivity : AppCompatActivity(), LocationListener {
@@ -58,11 +65,53 @@ class OpenStreetMapsActivity : AppCompatActivity(), LocationListener {
         map.setMultiTouchControls(true)
         map.controller.setZoom(18.0)
 
+        // 1. Centrar inicialmente con la sesión
         updateMapPosition(MainActivity.lastLatSession, MainActivity.lastLonSession)
+
+        // 2. Cargar historial de Room y dibujar la ruta [cite: 188, 268]
+        loadDatabaseMarkers()
 
         if (MainActivity.isGpsEnabledSession) {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5f, this)
+            }
+        }
+    }
+
+    // Función para cargar coordenadas desde Room y mostrarlas en el mapa [cite: 269]
+    private fun loadDatabaseMarkers() {
+        val db = AppDatabase.getDatabase(this)
+        lifecycleScope.launch(Dispatchers.IO) {
+            // Obtener coordenadas de Room [cite: 272]
+            val dbCoordinates = db.coordinatesDao().getAll()
+            val roomGeoPoints = dbCoordinates.map { GeoPoint(it.latitude, it.longitude) }
+
+            withContext(Dispatchers.Main) {
+                // Limpiar overlays antiguos si fuera necesario para refrescar
+                map.overlays.clear()
+
+                // Añadir Polyline (Línea de ruta) [cite: 293, 304]
+                val polyline = Polyline()
+                polyline.setPoints(roomGeoPoints)
+                polyline.outlinePaint.color = Color.BLUE
+                map.overlays.add(polyline)
+
+                // Añadir marcadores para cada punto guardado [cite: 282, 283]
+                for (geoPoint in roomGeoPoints) {
+                    val marker = Marker(map)
+                    marker.position = geoPoint
+                    marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                    // Usar icono de borrado como marcador según snippet [cite: 289]
+                    marker.icon = ContextCompat.getDrawable(this@OpenStreetMapsActivity, android.R.drawable.ic_delete)
+                    marker.title = "Saved Coordinate"
+                    map.overlays.add(marker)
+                }
+
+                // Volver a añadir el marcador de posición actual (el rojo)
+                myMarker = null
+                updateMapPosition(MainActivity.lastLatSession, MainActivity.lastLonSession)
+
+                map.invalidate()
             }
         }
     }
@@ -75,13 +124,29 @@ class OpenStreetMapsActivity : AppCompatActivity(), LocationListener {
 
         updateMapPosition(MainActivity.lastLatSession, MainActivity.lastLonSession)
 
-        // Lógica de guardado también en el mapa para no perder datos
         val currentTime = System.currentTimeMillis()
         val distance = MainActivity.lastSavedLocation?.distanceTo(location) ?: Float.MAX_VALUE
+
         if (currentTime - MainActivity.lastSaveTime > 10000 && distance > 5f) {
             MainActivity.lastSaveTime = currentTime
             MainActivity.lastSavedLocation = location
+
+            // Guardar en archivo CSV
             saveCoordinatesToFile(location.latitude, location.longitude, location.altitude, currentTime)
+
+            // Guardar en Room [cite: 85]
+            saveCoordinatesToDatabase(location.latitude, location.longitude, location.altitude, currentTime)
+
+            // Recargar la ruta en el mapa para mostrar el nuevo tramo
+            loadDatabaseMarkers()
+        }
+    }
+
+    private fun saveCoordinatesToDatabase(lat: Double, lon: Double, alt: Double, time: Long) {
+        val db = AppDatabase.getDatabase(this)
+        val entity = CoordinatesEntity(time, lat, lon, alt)
+        lifecycleScope.launch(Dispatchers.IO) {
+            db.coordinatesDao().insert(entity)
         }
     }
 
@@ -89,6 +154,7 @@ class OpenStreetMapsActivity : AppCompatActivity(), LocationListener {
         if (latStr != "---" && lonStr != "---") {
             val point = GeoPoint(latStr.replace(",", ".").toDouble(), lonStr.replace(",", ".").toDouble())
             map.controller.setCenter(point)
+
             if (myMarker == null) {
                 myMarker = Marker(map)
                 val xIcon = ContextCompat.getDrawable(this, android.R.drawable.ic_delete)

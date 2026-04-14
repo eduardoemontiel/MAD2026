@@ -38,32 +38,59 @@
             android:textColor="#000000"
             android:layout_marginBottom="24dp" />
 
-        <TextView
-            android:id="@+id/tvDetailLat"
-            android:layout_width="wrap_content"
+        <EditText
+            android:id="@+id/etTimestamp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="18sp"
-            android:textColor="#3F51B5"
-            android:layout_marginBottom="12dp"
-            tools:text="Latitud: 0.0000" />
+            android:hint="Timestamp"
+            android:enabled="false"
+            android:inputType="none"
+            android:layout_marginBottom="12dp" />
 
-        <TextView
-            android:id="@+id/tvDetailLon"
-            android:layout_width="wrap_content"
+        <EditText
+            android:id="@+id/etLatitude"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="18sp"
-            android:textColor="#3F51B5"
-            android:layout_marginBottom="12dp"
-            tools:text="Longitud: 0.0000" />
+            android:hint="Latitude"
+            android:inputType="numberDecimal|numberSigned"
+            android:layout_marginBottom="12dp" />
 
-        <TextView
-            android:id="@+id/tvDetailAlt"
-            android:layout_width="wrap_content"
+        <EditText
+            android:id="@+id/etLongitude"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="18sp"
-            android:textColor="#3F51B5"
-            android:layout_marginBottom="12dp"
-            tools:text="Altitud: 0.00m" />
+            android:hint="Longitude"
+            android:inputType="numberDecimal|numberSigned"
+            android:layout_marginBottom="12dp" />
+
+        <EditText
+            android:id="@+id/etAltitude"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Altitude"
+            android:inputType="numberDecimal|numberSigned"
+            android:layout_marginBottom="24dp" />
+
+        <Button
+            android:id="@+id/buttonUpdate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="UPDATE COORDINATES"
+            android:backgroundTint="#4CAF50"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/buttonDelete"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="DELETE COORDINATE"
+            android:backgroundTint="#D32F2F"
+            android:textColor="#FFFFFF" />
+
+        <TextView android:id="@+id/tvDetailLat" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
+        <TextView android:id="@+id/tvDetailLon" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
+        <TextView android:id="@+id/tvDetailAlt" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />
 
         <View
             android:layout_width="match_parent"

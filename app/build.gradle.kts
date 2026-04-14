@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("kotlin-kapt")
 }
 
 android {
@@ -63,4 +64,9 @@ dependencies {
     implementation("org.osmdroid:osmdroid-android:6.1.20")
     implementation("com.google.android.material:material:1.9.0")
     implementation("androidx.drawerlayout:drawerlayout:1.1.1")
+    implementation("androidx.room:room-runtime:2.6.1") // Librería base
+    implementation("androidx.room:room-ktx:2.6.1")     // Soporte para Corrutinas
+    kapt("androidx.room:room-compiler:2.6.1")          // Compilador de Room
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 }

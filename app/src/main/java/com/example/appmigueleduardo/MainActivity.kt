@@ -9,6 +9,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Switch
@@ -16,7 +17,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.lifecycleScope
+import com.example.appmigueleduardo.room.AppDatabase
+import com.example.appmigueleduardo.room.CoordinatesEntity
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import kotlinx.coroutines.launch
 import java.io.File
 
 class MainActivity : AppCompatActivity(), LocationListener {
@@ -103,7 +108,27 @@ class MainActivity : AppCompatActivity(), LocationListener {
         if (currentTime - lastSaveTime > 10000 && distance > 5f) {
             lastSaveTime = currentTime
             lastSavedLocation = location
+
+            // Guardado en archivo CSV
             saveCoordinatesToFile(location.latitude, location.longitude, location.altitude, currentTime)
+
+            // Guardado en Base de Datos Room
+            saveCoordinatesToDatabase(location.latitude, location.longitude, location.altitude, currentTime)
+        }
+    }
+
+    private fun saveCoordinatesToDatabase(latitude: Double, longitude: Double, altitude: Double, timestamp: Long) {
+        val coordinates = CoordinatesEntity(
+            timestamp = timestamp,
+            latitude = latitude,
+            longitude = longitude,
+            altitude = altitude
+        )
+
+        val db = AppDatabase.getDatabase(this)
+        lifecycleScope.launch {
+            db.coordinatesDao().insert(coordinates)
+            Log.d("MainActivity", "Nueva ubicación guardada en Room")
         }
     }
 
