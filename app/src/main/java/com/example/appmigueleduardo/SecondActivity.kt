@@ -13,11 +13,14 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.appmigueleduardo.room.AppDatabase
+import com.example.appmigueleduardo.room.CoordinatesEntity
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import kotlinx.coroutines.launch
 import java.io.File
-import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -50,21 +53,34 @@ class SecondActivity : AppCompatActivity(), LocationListener {
             }
         }
 
-        val data = readFileContents().toMutableList()
         val recyclerView: RecyclerView = findViewById(R.id.recyclerViewGPS)
         recyclerView.layoutManager = LinearLayoutManager(this)
-        adapter = GPSAdapter(data) { item ->
+
+        adapter = GPSAdapter(emptyList()) { item ->
             startActivity(Intent(this, ThirdActivity::class.java).apply {
-                putExtra("latitude", item[1]); putExtra("longitude", item[2]); putExtra("altitude", item[3])
+                putExtra("timestamp", item.timestamp.toString())
+                putExtra("latitude", item.latitude.toString())
+                putExtra("longitude", item.longitude.toString())
+                putExtra("altitude", item.altitude.toString())
                 addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
             })
         }
         recyclerView.adapter = adapter
 
+        loadDataFromDatabase()
+
         if (MainActivity.isGpsEnabledSession) {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5f, this)
             }
+        }
+    }
+
+    private fun loadDataFromDatabase() {
+        val db = AppDatabase.getDatabase(this)
+        lifecycleScope.launch {
+            val dbCoordinates = db.coordinatesDao().getAll()
+            adapter.updateData(dbCoordinates)
         }
     }
 
@@ -77,11 +93,22 @@ class SecondActivity : AppCompatActivity(), LocationListener {
         if (currentTime - MainActivity.lastSaveTime > 10000 && distance > 5f) {
             MainActivity.lastSaveTime = currentTime
             MainActivity.lastSavedLocation = location
+
             saveCoordinatesToFile(location.latitude, location.longitude, location.altitude, currentTime)
 
-            // Refrescar la lista visualmente
-            adapter.updateData(readFileContents())
+            // Usamos una sola corrutina para asegurar el orden: primero guardar, luego recargar [cite: 71, 97]
+            lifecycleScope.launch {
+                saveCoordinatesToDatabase(location.latitude, location.longitude, location.altitude, currentTime)
+                loadDataFromDatabase()
+            }
         }
+    }
+
+    // Cambiada a suspend para que la corrutina espere a que termine la inserción [cite: 49]
+    private suspend fun saveCoordinatesToDatabase(lat: Double, lon: Double, alt: Double, time: Long) {
+        val db = AppDatabase.getDatabase(this)
+        val entity = CoordinatesEntity(time, lat, lon, alt)
+        db.coordinatesDao().insert(entity)
     }
 
     private fun saveCoordinatesToFile(lat: Double, lon: Double, alt: Double, time: Long) {
@@ -89,19 +116,13 @@ class SecondActivity : AppCompatActivity(), LocationListener {
         file.appendText("$time; ${String.format("%.4f", lat)}; ${String.format("%.4f", lon)}; ${String.format("%.2f", alt)}\n")
     }
 
-    private fun readFileContents(): List<List<String>> {
-        val file = File(filesDir, "gps_coordinates.csv")
-        if (!file.exists()) return emptyList()
-        return file.readLines().map { it.split(";").map(String::trim) }
-    }
-
     override fun onPause() { super.onPause(); locationManager.removeUpdates(this) }
 }
 
-class GPSAdapter(private var items: List<List<String>>, private val onClick: (List<String>) -> Unit) :
+class GPSAdapter(private var items: List<CoordinatesEntity>, private val onClick: (CoordinatesEntity) -> Unit) :
     RecyclerView.Adapter<GPSAdapter.ViewHolder>() {
 
-    fun updateData(newItems: List<List<String>>) {
+    fun updateData(newItems: List<CoordinatesEntity>) {
         this.items = newItems
         notifyDataSetChanged()
     }
@@ -120,16 +141,15 @@ class GPSAdapter(private var items: List<List<String>>, private val onClick: (Li
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
-        if (item.size >= 4) {
-            val dateStr = try {
-                SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(item[0].toLong()))
-            } catch (e: Exception) { item[0] }
-            holder.tvDate.text = dateStr
-            holder.tvLat.text = item[1]
-            holder.tvLon.text = item[2]
-            holder.tvAlt.text = item[3]
-            holder.itemView.setOnClickListener { onClick(item) }
-        }
+        val dateStr = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(item.timestamp))
+
+        holder.tvDate.text = dateStr
+        holder.tvLat.text = String.format("%.4f", item.latitude)
+        holder.tvLon.text = String.format("%.4f", item.longitude)
+        holder.tvAlt.text = String.format("%.2f", item.altitude)
+
+        holder.itemView.setOnClickListener { onClick(item) }
     }
+
     override fun getItemCount() = items.size
 }
