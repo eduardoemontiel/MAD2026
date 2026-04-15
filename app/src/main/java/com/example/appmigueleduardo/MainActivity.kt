@@ -1,27 +1,35 @@
 package com.example.appmigueleduardo
 
 import android.Manifest
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
-import android.widget.EditText
+import android.widget.ImageView
 import android.widget.Switch
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.Glide
+import com.example.appmigueleduardo.network.WeatherApiService
+import com.example.appmigueleduardo.network.WeatherResponse
 import com.example.appmigueleduardo.room.AppDatabase
 import com.example.appmigueleduardo.room.CoordinatesEntity
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.launch
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
 
 class MainActivity : AppCompatActivity(), LocationListener {
@@ -36,9 +44,11 @@ class MainActivity : AppCompatActivity(), LocationListener {
 
     private lateinit var locationManager: LocationManager
     private val locationPermissionCode = 2
-    private var latestLocation: Location? = null
     private lateinit var locationSwitch: Switch
     private val PREFS_NAME = "AppPreferences"
+
+    private lateinit var weatherTextView: TextView
+    private lateinit var weatherIcon: ImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,9 +57,11 @@ class MainActivity : AppCompatActivity(), LocationListener {
 
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-        val userIdentifier = getUserIdentifier()
-        if (userIdentifier == null) showUserIdentifierDialog()
-        else findViewById<TextView>(R.id.tvUser).text = userIdentifier
+        weatherTextView = findViewById(R.id.weatherTextView)
+        weatherIcon = findViewById(R.id.weatherIcon)
+
+        // Actualizar el nombre de usuario al iniciar
+        updateUserDisplay()
 
         locationSwitch = findViewById(R.id.locationSwitch)
         locationSwitch.isChecked = isGpsEnabledSession
@@ -91,7 +103,24 @@ class MainActivity : AppCompatActivity(), LocationListener {
                 else -> false
             }
         }
-        findViewById<Button>(R.id.userIdentifierButton).setOnClickListener { showUserIdentifierDialog() }
+
+        // CAMBIO: Ahora el botón naranja abre la actividad de Settings
+        findViewById<Button>(R.id.userIdentifierButton).setOnClickListener {
+            val intent = Intent(this, SettingsActivity::class.java)
+            startActivity(intent)
+        }
+    }
+
+    // Para que el nombre de usuario se actualice al volver de Settings
+    override fun onResume() {
+        super.onResume()
+        updateUserDisplay()
+    }
+
+    private fun updateUserDisplay() {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val userIdentifier = prefs.getString("userIdentifier", "---")
+        findViewById<TextView>(R.id.tvUser).text = userIdentifier
     }
 
     override fun onLocationChanged(location: Location) {
@@ -102,33 +131,78 @@ class MainActivity : AppCompatActivity(), LocationListener {
         findViewById<TextView>(R.id.tvLat).text = lastLatSession
         findViewById<TextView>(R.id.tvLon).text = lastLonSession
 
+        getWeatherForecast(location.latitude, location.longitude)
+
         val currentTime = System.currentTimeMillis()
         val distance = lastSavedLocation?.distanceTo(location) ?: Float.MAX_VALUE
 
         if (currentTime - lastSaveTime > 10000 && distance > 5f) {
             lastSaveTime = currentTime
             lastSavedLocation = location
-
-            // Guardado en archivo CSV
             saveCoordinatesToFile(location.latitude, location.longitude, location.altitude, currentTime)
-
-            // Guardado en Base de Datos Room
             saveCoordinatesToDatabase(location.latitude, location.longitude, location.altitude, currentTime)
         }
     }
 
-    private fun saveCoordinatesToDatabase(latitude: Double, longitude: Double, altitude: Double, timestamp: Long) {
-        val coordinates = CoordinatesEntity(
-            timestamp = timestamp,
-            latitude = latitude,
-            longitude = longitude,
-            altitude = altitude
-        )
+    // --- FUNCIONES DE CLIMA (RETROFIT) ---
 
+    private fun isNetworkAvailable(): Boolean {
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork ?: return false
+        val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return activeNetwork.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    private fun getWeatherForecast(lat: Double, lon: Double) {
+        if (!isNetworkAvailable()) return
+
+        // CAMBIO: Leemos la API KEY de SharedPreferences
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val apiKey = prefs.getString("API_KEY", "")
+
+        if (apiKey.isNullOrBlank()) {
+            weatherTextView.text = "Configura tu API KEY en ajustes"
+            return
+        }
+
+        val retrofit = Retrofit.Builder()
+            .baseUrl("https://api.openweathermap.org/data/2.5/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+        val service = retrofit.create(WeatherApiService::class.java)
+        val call = service.getWeatherForecast(lat, lon, 1, apiKey)
+
+        call.enqueue(object : Callback<WeatherResponse> {
+            override fun onResponse(call: Call<WeatherResponse>, response: Response<WeatherResponse>) {
+                if (response.isSuccessful) {
+                    response.body()?.let { showWeatherInfo(it) }
+                }
+            }
+            override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {
+                Log.e("MainActivity", "Error fetching weather: ${t.message}")
+            }
+        })
+    }
+
+    private fun showWeatherInfo(weatherResponse: WeatherResponse) {
+        val item = weatherResponse.list.firstOrNull()
+        if (item != null) {
+            val tempCelsius = item.main.temp - 273.15
+            val tempFormatted = String.format("%.1f", tempCelsius)
+            weatherTextView.text = "${item.name}: $tempFormatted°C\n${item.weather[0].description}"
+            val iconUrl = "https://openweathermap.org/img/wn/${item.weather[0].icon}@4x.png"
+            Glide.with(this).load(iconUrl).into(weatherIcon)
+        }
+    }
+
+    // --- FUNCIONES DE PERSISTENCIA (ROOM) ---
+
+    private fun saveCoordinatesToDatabase(latitude: Double, longitude: Double, altitude: Double, timestamp: Long) {
+        val coordinates = CoordinatesEntity(timestamp, latitude, longitude, altitude)
         val db = AppDatabase.getDatabase(this)
         lifecycleScope.launch {
             db.coordinatesDao().insert(coordinates)
-            Log.d("MainActivity", "Nueva ubicación guardada en Room")
         }
     }
 
@@ -139,33 +213,6 @@ class MainActivity : AppCompatActivity(), LocationListener {
         findViewById<TextView>(R.id.tvLon).text = "---"
         lastSavedLocation = null
         lastSaveTime = 0
-    }
-
-    private fun getUserIdentifier(): String? {
-        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getString("userIdentifier", null)
-    }
-
-    private fun saveUserIdentifier(id: String) {
-        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putString("userIdentifier", id).apply()
-    }
-
-    private fun showUserIdentifierDialog() {
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle("Enter User Identifier")
-        val input = EditText(this)
-        input.setText(getUserIdentifier())
-        builder.setView(input)
-        builder.setPositiveButton("OK") { _, _ ->
-            val userInput = input.text.toString()
-            if (userInput.isNotBlank()) {
-                saveUserIdentifier(userInput)
-                findViewById<TextView>(R.id.tvUser).text = userInput
-            }
-        }
-        builder.setNegativeButton("Cancel") { dialog, _ -> dialog.cancel() }
-        builder.show()
     }
 
     private fun saveCoordinatesToFile(latitude: Double, longitude: Double, altitude: Double, timestamp: Long) {
