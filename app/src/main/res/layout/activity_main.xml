@@ -153,6 +153,35 @@
                         android:textColor="#3F51B5" />
                 </LinearLayout>
             </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/weatherContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:padding="16dp"
+                android:background="#E0F2F1"
+                android:layout_marginTop="12dp">
+
+                <TextView
+                    android:id="@+id/weatherTextView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Información del clima"
+                    android:textSize="16sp"
+                    android:textColor="#00796B"
+                    android:gravity="center"
+                    android:padding="8dp" />
+
+                <ImageView
+                    android:id="@+id/weatherIcon"
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:scaleType="fitCenter"
+                    android:layout_marginTop="8dp" />
+            </LinearLayout>
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
