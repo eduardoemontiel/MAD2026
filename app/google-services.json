@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "819747222967",
+    "project_id": "migueledumad",
+    "storage_bucket": "migueledumad.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:819747222967:android:47b9006eb70b8f9a3aa432",
+        "android_client_info": {
+          "package_name": "com.example.appmigueleduardo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "819747222967-er86affls26pisr1obivef9ei4kln8sj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.appmigueleduardo",
+            "certificate_hash": "070d9a8587e32732e5b61eb60699d70c850b6641"
+          }
+        },
+        {
+          "client_id": "819747222967-t9bvek1q8dn63sq2dp005tvfutcoenjl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDG-o9e3o1oFhqMSeD6c8i2R21-bs4GHkM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "819747222967-t9bvek1q8dn63sq2dp005tvfutcoenjl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
