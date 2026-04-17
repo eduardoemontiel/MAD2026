@@ -11,10 +11,13 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.Switch
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
@@ -23,7 +26,9 @@ import com.example.appmigueleduardo.network.WeatherApiService
 import com.example.appmigueleduardo.network.WeatherResponse
 import com.example.appmigueleduardo.room.AppDatabase
 import com.example.appmigueleduardo.room.CoordinatesEntity
+import com.firebase.ui.auth.AuthUI
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Callback
@@ -50,6 +55,9 @@ class MainActivity : AppCompatActivity(), LocationListener {
     private lateinit var weatherTextView: TextView
     private lateinit var weatherIcon: ImageView
 
+    // Elemento para mostrar nombre de Firebase
+    private lateinit var userNameTextView: TextView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         overridePendingTransition(0, 0)
@@ -59,9 +67,11 @@ class MainActivity : AppCompatActivity(), LocationListener {
 
         weatherTextView = findViewById(R.id.weatherTextView)
         weatherIcon = findViewById(R.id.weatherIcon)
+        userNameTextView = findViewById(R.id.userNameTextView)
 
-        // Actualizar el nombre de usuario al iniciar
+        // Actualizar el nombre de usuario (SharedPreferences y Firebase)
         updateUserDisplay()
+        updateUIWithUsername()
 
         locationSwitch = findViewById(R.id.locationSwitch)
         locationSwitch.isChecked = isGpsEnabledSession
@@ -104,17 +114,65 @@ class MainActivity : AppCompatActivity(), LocationListener {
             }
         }
 
-        // CAMBIO: Ahora el botón naranja abre la actividad de Settings
         findViewById<Button>(R.id.userIdentifierButton).setOnClickListener {
             val intent = Intent(this, SettingsActivity::class.java)
             startActivity(intent)
         }
+
+        findViewById<Button>(R.id.btnLogoutManual).setOnClickListener {
+            logout()
+        }
     }
 
-    // Para que el nombre de usuario se actualice al volver de Settings
+    // --- LÓGICA DE FIREBASE AUTH ---
+
+    private fun updateUIWithUsername() {
+        val user = FirebaseAuth.getInstance().currentUser
+        user?.let {
+            val name = it.displayName ?: "No Name"
+            userNameTextView.text = "👤 $name"
+        }
+    }
+
+    private fun logout() {
+        AuthUI.getInstance()
+            .signOut(this)
+            .addOnCompleteListener {
+                // IMPORTANTE: Limpiar tus preferencias locales al cerrar sesión
+                val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                prefs.edit().clear().apply()
+
+                Toast.makeText(this, R.string.signed_out, Toast.LENGTH_SHORT).show()
+                val intent = Intent(this, LoginActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
+                finish()
+            }
+    }
+
+    // --- MENÚ SUPERIOR (LOGOUT) ---
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.toolbar_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_logout -> {
+                logout()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    // --- RESTO DE TUS FUNCIONES (SIN CAMBIOS) ---
+
     override fun onResume() {
         super.onResume()
         updateUserDisplay()
+        updateUIWithUsername()
     }
 
     private fun updateUserDisplay() {
@@ -125,17 +183,13 @@ class MainActivity : AppCompatActivity(), LocationListener {
 
     override fun onLocationChanged(location: Location) {
         if (!isGpsEnabledSession) return
-
         lastLatSession = String.format("%.4f", location.latitude)
         lastLonSession = String.format("%.4f", location.longitude)
         findViewById<TextView>(R.id.tvLat).text = lastLatSession
         findViewById<TextView>(R.id.tvLon).text = lastLonSession
-
         getWeatherForecast(location.latitude, location.longitude)
-
         val currentTime = System.currentTimeMillis()
         val distance = lastSavedLocation?.distanceTo(location) ?: Float.MAX_VALUE
-
         if (currentTime - lastSaveTime > 10000 && distance > 5f) {
             lastSaveTime = currentTime
             lastSavedLocation = location
@@ -143,8 +197,6 @@ class MainActivity : AppCompatActivity(), LocationListener {
             saveCoordinatesToDatabase(location.latitude, location.longitude, location.altitude, currentTime)
         }
     }
-
-    // --- FUNCIONES DE CLIMA (RETROFIT) ---
 
     private fun isNetworkAvailable(): Boolean {
         val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -155,24 +207,18 @@ class MainActivity : AppCompatActivity(), LocationListener {
 
     private fun getWeatherForecast(lat: Double, lon: Double) {
         if (!isNetworkAvailable()) return
-
-        // CAMBIO: Leemos la API KEY de SharedPreferences
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val apiKey = prefs.getString("API_KEY", "")
-
         if (apiKey.isNullOrBlank()) {
             weatherTextView.text = "Configura tu API KEY en ajustes"
             return
         }
-
         val retrofit = Retrofit.Builder()
             .baseUrl("https://api.openweathermap.org/data/2.5/")
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-
         val service = retrofit.create(WeatherApiService::class.java)
         val call = service.getWeatherForecast(lat, lon, 1, apiKey)
-
         call.enqueue(object : Callback<WeatherResponse> {
             override fun onResponse(call: Call<WeatherResponse>, response: Response<WeatherResponse>) {
                 if (response.isSuccessful) {
@@ -195,8 +241,6 @@ class MainActivity : AppCompatActivity(), LocationListener {
             Glide.with(this).load(iconUrl).into(weatherIcon)
         }
     }
-
-    // --- FUNCIONES DE PERSISTENCIA (ROOM) ---
 
     private fun saveCoordinatesToDatabase(latitude: Double, longitude: Double, altitude: Double, timestamp: Long) {
         val coordinates = CoordinatesEntity(timestamp, latitude, longitude, altitude)

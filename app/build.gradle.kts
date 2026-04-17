@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("kotlin-kapt")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -71,4 +72,11 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.github.bumptech.glide:glide:4.15.1")
     kapt("com.github.bumptech.glide:compiler:4.15.1")
+    // Firebase Auth y Google Login
+    implementation("com.google.firebase:firebase-auth-ktx:22.1.1")
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation("com.firebaseui:firebase-ui-auth:8.0.2")
+
+    // Firebase Realtime Database
+    implementation("com.google.firebase:firebase-database-ktx:20.3.0")
 }
