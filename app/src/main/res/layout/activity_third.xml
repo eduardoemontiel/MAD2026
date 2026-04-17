@@ -86,6 +86,15 @@
             android:layout_height="wrap_content"
             android:text="DELETE COORDINATE"
             android:backgroundTint="#D32F2F"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/addReportButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ADD REPORT TO FIREBASE"
+            android:backgroundTint="#FF9800"
             android:textColor="#FFFFFF" />
 
         <TextView android:id="@+id/tvDetailLat" android:layout_width="0dp" android:layout_height="0dp" android:visibility="gone" />

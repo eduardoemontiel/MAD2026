@@ -11,6 +11,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.appmigueleduardo.room.AppDatabase
 import com.example.appmigueleduardo.room.CoordinatesEntity
+// --- NUEVOS IMPORTS PARA FIREBASE ---
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
+// ------------------------------------
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -28,13 +32,12 @@ class ThirdActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_third)
 
-        // 1. Vincular con los IDs del XML (Asegúrate de que coincidan con tu activity_third.xml)
+        // 1. Vincular con los IDs del XML
         etTimestamp = findViewById(R.id.etTimestamp)
         etLatitude = findViewById(R.id.etLatitude)
         etLongitude = findViewById(R.id.etLongitude)
         etAltitude = findViewById(R.id.etAltitude)
 
-        // TextViews que ya tenías (opcional mantenerlos o usar solo los EditText)
         val tvLat: TextView = findViewById(R.id.tvDetailLat)
         val tvLon: TextView = findViewById(R.id.tvDetailLon)
         val tvAlt: TextView = findViewById(R.id.tvDetailAlt)
@@ -53,20 +56,19 @@ class ThirdActivity : AppCompatActivity() {
         etLongitude.setText(longitude)
         etAltitude.setText(altitude)
 
-        // Mantener la visualización en los TextViews que ya tenías
         tvLat.text = "Latitud: $latitude"
         tvLon.text = "Longitud: $longitude"
         tvAlt.text = "Altitud: $altitude"
 
-        // 4. Configurar botones de acción
+        // --- 4. CONFIGURAR BOTONES DE ACCIÓN ---
 
-        // Botón Actualizar
+        // Botón Actualizar (Local - Room)
         val updateButton: Button = findViewById(R.id.buttonUpdate)
         updateButton.setOnClickListener {
             showUpdateConfirmationDialog()
         }
 
-        // Botón Eliminar
+        // Botón Eliminar (Local - Room)
         val deleteButton: Button = findViewById(R.id.buttonDelete)
         deleteButton.setOnClickListener {
             val ts = etTimestamp.text.toString().toLongOrNull()
@@ -82,9 +84,52 @@ class ThirdActivity : AppCompatActivity() {
         btnBack.setOnClickListener {
             finish()
         }
+
+        // --- NUEVO: BOTÓN ENVIAR A FIREBASE (Según Snippet) ---
+        val addReportButton: Button = findViewById(R.id.addReportButton)
+        addReportButton.setOnClickListener {
+            val user = FirebaseAuth.getInstance().currentUser
+            val userId = user?.uid
+
+            if (userId != null) {
+                // Obtenemos el texto de los campos que ya tienes en tu ThirdActivity
+                val tsValue = etTimestamp.text.toString().toLongOrNull() ?: System.currentTimeMillis()
+                val latValue = etLatitude.text.toString().toDoubleOrNull() ?: 0.0
+                val lonValue = etLongitude.text.toString().toDoubleOrNull() ?: 0.0
+
+                // Creamos el mapa de datos siguiendo la estructura del snippet [cite: 289, 291-295]
+                val report = mapOf(
+                    "userId" to userId,
+                "timestamp" to tsValue,
+                "report" to "Reporte de Miguel en: ${etLatitude.text}, ${etLongitude.text}",
+                "latitude" to latValue,
+                "longitude" to lonValue
+                )
+
+                // Llamamos a la función que usa databaseReference.setValue [cite: 296, 306]
+                addReportToDatabase(report)
+            } else {
+                Toast.makeText(this, "Debes iniciar sesión primero", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
-    // --- LÓGICA DE ACTUALIZACIÓN ---
+    // --- LÓGICA DE FIREBASE REALTIME DATABASE ---
+
+    private fun addReportToDatabase(report: Map<String, Any>) {
+        // "hotspots" es el nombre del nodo en la base de datos
+        val databaseReference = FirebaseDatabase.getInstance().reference.child("hotspots").push()
+
+        databaseReference.setValue(report)
+            .addOnSuccessListener {
+                Toast.makeText(this, "Reporte subido a Firebase con éxito", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(this, "Error al subir: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    // --- LÓGICA DE ACTUALIZACIÓN (ROOM) ---
 
     private fun showUpdateConfirmationDialog() {
         AlertDialog.Builder(this)
@@ -113,18 +158,18 @@ class ThirdActivity : AppCompatActivity() {
                 Log.d(TAG, "Coordinate updated: $updatedCoordinate")
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@ThirdActivity, "Actualizado correctamente", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ThirdActivity, "Actualizado en local", Toast.LENGTH_SHORT).show()
                     finish()
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@ThirdActivity, "Error al actualizar", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@ThirdActivity, "Error al actualizar local", Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
 
-    // --- LÓGICA DE ELIMINACIÓN ---
+    // --- LÓGICA DE ELIMINACIÓN (ROOM) ---
 
     private fun showDeleteConfirmationDialog(timestamp: Long) {
         AlertDialog.Builder(this)
@@ -144,7 +189,7 @@ class ThirdActivity : AppCompatActivity() {
             Log.d(TAG, "Coordinate with timestamp $timestamp deleted.")
 
             withContext(Dispatchers.Main) {
-                Toast.makeText(this@ThirdActivity, "Eliminado correctamente", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@ThirdActivity, "Eliminado de local", Toast.LENGTH_SHORT).show()
                 finish()
             }
         }
