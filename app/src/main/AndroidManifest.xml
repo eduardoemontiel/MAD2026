@@ -15,7 +15,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppMiguelEduardo">
+        android:theme="@style/Theme.BreatheSafe">
 
         <activity
             android:name=".LoginActivity"
@@ -26,29 +26,11 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".SettingsActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".SecondActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".OpenStreetMapsActivity"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
-
-        <activity
-            android:name=".ThirdActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".MainActivity"
-            android:exported="false"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.AppMiguelEduardo">
-        </activity>
+        <activity android:name=".SettingsActivity" android:exported="false" />
+        <activity android:name=".SecondActivity" android:exported="false" />
+        <activity android:name=".OpenStreetMapsActivity" android:exported="false" android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+        <activity android:name=".ThirdActivity" android:exported="false" />
+        <activity android:name=".MainActivity" android:exported="false" android:label="@string/app_name" android:theme="@style/Theme.BreatheSafe" />
 
     </application>
 

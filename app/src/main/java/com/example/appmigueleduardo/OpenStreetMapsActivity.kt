@@ -9,68 +9,61 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.view.View
+import android.widget.Button
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
-import com.example.appmigueleduardo.room.AppDatabase
-import com.example.appmigueleduardo.room.CoordinatesEntity
+import com.example.appmigueleduardo.network.*
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.osmdroid.config.Configuration
+import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
-import java.io.File
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 class OpenStreetMapsActivity : AppCompatActivity(), LocationListener {
     private lateinit var map: MapView
     private lateinit var locationManager: LocationManager
+    private lateinit var tvRecommendation: TextView
+    private lateinit var btnClearRoute: Button
     private var myMarker: Marker? = null
+    private var destinationMarker: Marker? = null
+    private var runningPath: Polyline? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        overridePendingTransition(0, 0)
         setContentView(R.layout.activity_open_street_maps)
-
+        tvRecommendation = findViewById(R.id.tvRecommendation)
+        btnClearRoute = findViewById(R.id.btnClearRoute)
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-
-        val navView: BottomNavigationView = findViewById(R.id.nav_view)
-        navView.selectedItemId = R.id.navigation_map
-        navView.setOnNavigationItemSelectedListener { item ->
-            if (item.itemId == navView.selectedItemId) return@setOnNavigationItemSelectedListener true
-            when (item.itemId) {
-                R.id.navigation_home -> {
-                    startActivity(Intent(this, MainActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) })
-                    finish()
-                    true
-                }
-                R.id.navigation_list -> {
-                    startActivity(Intent(this, SecondActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) })
-                    finish()
-                    true
-                }
-                else -> false
-            }
-        }
-
+        setupNavigation()
         map = findViewById(R.id.mapView)
-        map.setBackgroundColor(Color.parseColor("#F5F5F5"))
         Configuration.getInstance().load(this, getSharedPreferences("osm", MODE_PRIVATE))
         map.setTileSource(TileSourceFactory.MAPNIK)
         map.setMultiTouchControls(true)
-        map.controller.setZoom(18.0)
-
-        // 1. Centrar inicialmente con la sesión
-        updateMapPosition(MainActivity.lastLatSession, MainActivity.lastLonSession)
-
-        // 2. Cargar historial de Room y dibujar la ruta [cite: 188, 268]
-        loadDatabaseMarkers()
-
+        map.controller.setZoom(17.0)
+        val mReceive = object : MapEventsReceiver {
+            override fun singleTapConfirmedHelper(p: GeoPoint): Boolean {
+                setDestination(p)
+                return true
+            }
+            override fun longPressHelper(p: GeoPoint): Boolean = false
+        }
+        map.overlays.add(MapEventsOverlay(mReceive))
+        btnClearRoute.setOnClickListener {
+            clearDestination()
+        }
+        updateMyPosition(MainActivity.lastLatSession, MainActivity.lastLonSession)
         if (MainActivity.isGpsEnabledSession) {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5f, this)
@@ -78,104 +71,141 @@ class OpenStreetMapsActivity : AppCompatActivity(), LocationListener {
         }
     }
 
-    // Función para cargar coordenadas desde Room y mostrarlas en el mapa [cite: 269]
-    private fun loadDatabaseMarkers() {
-        val db = AppDatabase.getDatabase(this)
-        lifecycleScope.launch(Dispatchers.IO) {
-            // Obtener coordenadas de Room [cite: 272]
-            val dbCoordinates = db.coordinatesDao().getAll()
-            val roomGeoPoints = dbCoordinates.map { GeoPoint(it.latitude, it.longitude) }
+    private fun setDestination(point: GeoPoint) {
+        if (destinationMarker == null) {
+            destinationMarker = Marker(map)
+            destinationMarker?.title = "Tu Meta"
+            destinationMarker?.icon = ContextCompat.getDrawable(this, android.R.drawable.ic_menu_compass)
+            map.overlays.add(destinationMarker)
+        }
+        destinationMarker?.position = point
+        tvRecommendation.text = "Destino fijado. Verificando calidad del aire..."
+        tvRecommendation.setTextColor(Color.parseColor("#1976D2"))
+        btnClearRoute.visibility = View.VISIBLE
+        checkAirQualityAtDestination(point.latitude, point.longitude)
+        drawRoute()
+        map.invalidate()
+    }
 
-            withContext(Dispatchers.Main) {
-                // Limpiar overlays antiguos si fuera necesario para refrescar
-                map.overlays.clear()
-
-                // Añadir Polyline (Línea de ruta) [cite: 293, 304]
-                val polyline = Polyline()
-                polyline.setPoints(roomGeoPoints)
-                polyline.outlinePaint.color = Color.BLUE
-                map.overlays.add(polyline)
-
-                // Añadir marcadores para cada punto guardado [cite: 282, 283]
-                for (geoPoint in roomGeoPoints) {
-                    val marker = Marker(map)
-                    marker.position = geoPoint
-                    marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                    // Usar icono de borrado como marcador según snippet [cite: 289]
-                    marker.icon = ContextCompat.getDrawable(this@OpenStreetMapsActivity, android.R.drawable.ic_delete)
-                    marker.title = "Saved Coordinate"
-                    map.overlays.add(marker)
-                }
-
-                // Volver a añadir el marcador de posición actual (el rojo)
-                myMarker = null
-                updateMapPosition(MainActivity.lastLatSession, MainActivity.lastLonSession)
-
-                map.invalidate()
+    private fun checkAirQualityAtDestination(lat: Double, lon: Double) {
+        val apiKey = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE).getString("API_KEY", "") ?: ""
+        if (apiKey.isBlank()) return
+        val service = Retrofit.Builder()
+            .baseUrl("https://api.openweathermap.org/data/2.5/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(WeatherApiService::class.java)
+        service.getWeatherForecast(lat, lon, 1, apiKey).enqueue(object : Callback<WeatherResponse> {
+            override fun onResponse(call: Call<WeatherResponse>, response: Response<WeatherResponse>) {
+                val weather = response.body()?.list?.firstOrNull()
+                val temp = weather?.let { String.format("%.1f", it.main.temp - 273.15) } ?: "--"
+                val desc = weather?.weather?.firstOrNull()?.description ?: ""
+                service.getAirPollution(lat, lon, apiKey).enqueue(object : Callback<AirPollutionResponse> {
+                    override fun onResponse(call: Call<AirPollutionResponse>, response: Response<AirPollutionResponse>) {
+                        val airData = response.body()?.list?.firstOrNull()
+                        val aqi = airData?.main?.aqi ?: 0
+                        val estadoAire = when(aqi) {
+                            1 -> "Buena"
+                            2 -> "Moderada"
+                            else -> "Mala/Peligrosa"
+                        }
+                        runOnUiThread {
+                            tvRecommendation.text = """
+Calidad del Aire: $estadoAire (AQI: $aqi)
+Tiempo: $temp°C, $desc
+""".trimIndent()
+                            tvRecommendation.setTextColor(if (aqi <= 2) Color.parseColor("#2E7D32") else Color.RED)
+                        }
+                    }
+                    override fun onFailure(call: Call<AirPollutionResponse>, t: Throwable) {}
+                })
             }
+            override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {}
+        })
+    }
+
+    private fun clearDestination() {
+        map.overlays.remove(destinationMarker)
+        map.overlays.remove(runningPath)
+        destinationMarker = null
+        runningPath = null
+        tvRecommendation.text = "Toca el mapa para elegir un destino"
+        tvRecommendation.setTextColor(Color.BLACK)
+        btnClearRoute.visibility = View.GONE
+        map.invalidate()
+    }
+
+    private fun updateMyPosition(latStr: String, lonStr: String) {
+        if (latStr != "---" && lonStr != "---") {
+            val lat = latStr.replace(",", ".").toDouble()
+            val lon = lonStr.replace(",", ".").toDouble()
+            val myPoint = GeoPoint(lat, lon)
+            if (myMarker == null) {
+                myMarker = Marker(map)
+                myMarker?.title = "Tú estás aquí"
+                val icon = ContextCompat.getDrawable(this, android.R.drawable.ic_menu_mylocation)
+                icon?.setTint(Color.BLUE)
+                myMarker?.icon = icon
+                map.overlays.add(myMarker)
+            }
+            myMarker?.position = myPoint
+            if (map.tag == null) {
+                map.controller.setCenter(myPoint)
+                map.tag = "centered"
+            }
+            drawRoute()
+            map.invalidate()
+        }
+    }
+
+    private fun drawRoute() {
+        val start = myMarker?.position
+        val end = destinationMarker?.position
+        if (start != null && end != null) {
+            if (runningPath == null) {
+                runningPath = Polyline()
+                runningPath?.outlinePaint?.color = Color.parseColor("#E91E63")
+                runningPath?.outlinePaint?.strokeWidth = 12f
+                map.overlays.add(runningPath)
+            }
+            runningPath?.setPoints(listOf(start, end))
         }
     }
 
     override fun onLocationChanged(location: Location) {
         if (!MainActivity.isGpsEnabledSession) return
-
         MainActivity.lastLatSession = String.format("%.4f", location.latitude)
         MainActivity.lastLonSession = String.format("%.4f", location.longitude)
-
-        updateMapPosition(MainActivity.lastLatSession, MainActivity.lastLonSession)
-
-        val currentTime = System.currentTimeMillis()
-        val distance = MainActivity.lastSavedLocation?.distanceTo(location) ?: Float.MAX_VALUE
-
-        if (currentTime - MainActivity.lastSaveTime > 10000 && distance > 5f) {
-            MainActivity.lastSaveTime = currentTime
-            MainActivity.lastSavedLocation = location
-
-            // Guardar en archivo CSV
-            saveCoordinatesToFile(location.latitude, location.longitude, location.altitude, currentTime)
-
-            // Guardar en Room [cite: 85]
-            saveCoordinatesToDatabase(location.latitude, location.longitude, location.altitude, currentTime)
-
-            // Recargar la ruta en el mapa para mostrar el nuevo tramo
-            loadDatabaseMarkers()
-        }
+        updateMyPosition(MainActivity.lastLatSession, MainActivity.lastLonSession)
     }
 
-    private fun saveCoordinatesToDatabase(lat: Double, lon: Double, alt: Double, time: Long) {
-        val db = AppDatabase.getDatabase(this)
-        val entity = CoordinatesEntity(time, lat, lon, alt)
-        lifecycleScope.launch(Dispatchers.IO) {
-            db.coordinatesDao().insert(entity)
-        }
-    }
-
-    private fun updateMapPosition(latStr: String, lonStr: String) {
-        if (latStr != "---" && lonStr != "---") {
-            val point = GeoPoint(latStr.replace(",", ".").toDouble(), lonStr.replace(",", ".").toDouble())
-            map.controller.setCenter(point)
-
-            if (myMarker == null) {
-                myMarker = Marker(map)
-                val xIcon = ContextCompat.getDrawable(this, android.R.drawable.ic_delete)
-                xIcon?.setTint(Color.RED)
-                myMarker?.icon = xIcon
-                map.overlays.add(myMarker)
+    private fun setupNavigation() {
+        val navView: BottomNavigationView = findViewById(R.id.nav_view)
+        navView.selectedItemId = R.id.navigation_map
+        navView.setOnNavigationItemSelectedListener { item ->
+            if (item.itemId == navView.selectedItemId) return@setOnNavigationItemSelectedListener true
+            when (item.itemId) {
+                R.id.navigation_home -> {
+                    startActivity(Intent(this, MainActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) })
+                    finish(); true
+                }
+                R.id.navigation_list -> {
+                    startActivity(Intent(this, SecondActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) })
+                    finish(); true
+                }
+                else -> false
             }
-            myMarker?.position = point
-            map.invalidate()
         }
-    }
-
-    private fun saveCoordinatesToFile(lat: Double, lon: Double, alt: Double, time: Long) {
-        val file = File(filesDir, "gps_coordinates.csv")
-        file.appendText("$time; ${String.format("%.4f", lat)}; ${String.format("%.4f", lon)}; ${String.format("%.2f", alt)}\n")
     }
 
     override fun onResume() { super.onResume(); map.onResume() }
-    override fun onPause() {
-        super.onPause()
-        map.onPause()
-        locationManager.removeUpdates(this)
-    }
+
+    override fun onPause() { super.onPause(); map.onPause(); locationManager.removeUpdates(this) }
+
+    override fun onStatusChanged(p: String?, s: Int, e: Bundle?) {}
+
+    override fun onProviderEnabled(p: String) {}
+
+    override fun onProviderDisabled(p: String) {}
+
 }

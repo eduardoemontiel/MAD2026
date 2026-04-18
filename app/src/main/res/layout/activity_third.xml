@@ -19,9 +19,9 @@
             android:id="@+id/btnBackToList"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="GO TO SECOND ACTIVITY"
+            android:text="GO BACK"
             android:layout_marginTop="30dp"
-            android:backgroundTint="#6200EE"
+            android:backgroundTint="@color/teal_700"
             android:textColor="#FFFFFF" />
 
         <View

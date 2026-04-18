@@ -8,17 +8,13 @@ import androidx.room.Update
 @Dao
 interface ICoordinatesDao {
     @Insert
-    suspend fun insert(coordinates: CoordinatesEntity) // 'suspend' para usar corrutinas
-
+    suspend fun insert(coordinates: CoordinatesEntity)
     @Query("SELECT * FROM coordinates")
     suspend fun getAll(): List<CoordinatesEntity>
-
     @Query("DELETE FROM coordinates WHERE timestamp = :timestamp")
     fun deleteWithTimestamp(timestamp: Long)
-
     @Update
     suspend fun updateCoordinate(coordinates: CoordinatesEntity)
-
     @Query("SELECT * FROM coordinates WHERE timestamp = :timestamp LIMIT 1")
     suspend fun getCoordinateByTimestamp(timestamp: Long): CoordinatesEntity?
 }
