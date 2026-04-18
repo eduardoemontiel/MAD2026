@@ -8,52 +8,46 @@ Github:
 Workspace: https://upm365.sharepoint.com/:u:/s/mad2026MiEd/IQA9UV7RhJthSZ7tt2sjsPw4AX4WyNn1B7g10JZo5kTtkQA?e=45IwG5
 
 ## Description:
-Esta aplicación muestra un mensaje de bienvenida personalizado para Miguel y Edu. Pide permiso para acceder a la ubicación, posteriormente calculando las coordenadas especificas para su uso proximamente. Permite navegar secuencialmente entre tres pantallas distintas utilizando botones para avanzar de actividad y ofrece una opción final para regresar a la pantalla anterior.
-Desde la pantalla inicial permite acceder al mapa con la ubicacion dada y colocar marcadores para configurar rutas conectandolos.
+An app for working out in safe air locations. You can use it to plan routes or workouts out in the open and know if the air is going to be of quality or hazardous.
 
 
 ## Screenshots and navigation
-![WhatsApp Image 2026-02-23 at 7 44 58 PM](https://github.com/user-attachments/assets/36b00c5b-5291-4ae8-af33-c17ffbda8cec)
+<img width="200" height="450" alt="WhatsApp Image 2026-04-18 at 6 37 04 PM" src="https://github.com/user-attachments/assets/0672ab48-80da-4e61-9916-19ad396a6d1b" />
 
-![WhatsApp Image 2026-04-12 at 10 12 21 PM](https://github.com/user-attachments/assets/0a21b6ec-626a-4c41-97d3-93cd9e6382cd)
+<img width="200" height="450" alt="WhatsApp Image 2026-04-18 at 6 37 06 PM (2)" src="https://github.com/user-attachments/assets/455cc45b-012e-4aad-ac0f-c310be94eef0" />
 
-![WhatsApp Image 2026-04-09 at 9 00 57 PM](https://github.com/user-attachments/assets/5c31579c-3f7e-4350-92a5-568665f2763c)
+<img width="200" height="450" alt="WhatsApp Image 2026-04-18 at 6 37 06 PM (1)" src="https://github.com/user-attachments/assets/07ae6480-ee77-4d3d-a028-38d0db482bce" />
 
-![WhatsApp Image 2026-04-09 at 9 00 27 PM](https://github.com/user-attachments/assets/39795e3d-bffe-4013-b085-7fef7e80c953)
+<img width="200" height="450" alt="WhatsApp Image 2026-04-18 at 6 37 06 PM" src="https://github.com/user-attachments/assets/5839f52b-11f7-49cb-b86b-56bd3018eecc" />
 
-![WhatsApp Image 2026-04-12 at 10 12 46 PM](https://github.com/user-attachments/assets/9bfb001c-3d96-4c7c-8fdb-51c0f020d95d)
+<img width="200" height="450" alt="WhatsApp Image 2026-04-18 at 6 37 05 PM (3)" src="https://github.com/user-attachments/assets/2dec64c4-af26-4666-8b79-322bc0a42f7c" />
 
-![WhatsApp Image 2026-04-12 at 10 12 38 PM](https://github.com/user-attachments/assets/79339d19-aebf-4ef5-9f3d-66d8057e6dd0)
+<img width="200" height="450" alt="WhatsApp Image 2026-04-18 at 6 37 05 PM (2)" src="https://github.com/user-attachments/assets/9342b198-8d2d-4766-a716-0df5483749cb" />
 
-![WhatsApp Image 2026-04-12 at 10 12 31 PM](https://github.com/user-attachments/assets/5f505740-dc23-4bca-9bbe-65cc219c8cbd)
+<img width="200" height="450" alt="WhatsApp Image 2026-04-18 at 6 37 05 PM" src="https://github.com/user-attachments/assets/88981f3f-4b79-4ac0-a36d-ed073e12d2fa" />
+
+
 
 
 
 ## Demo Video
 Short video demonstrating how the app works and all the features:
-https://upm365-my.sharepoint.com/:v:/g/personal/miguel_rdelahuerga_alumnos_upm_es/IQDDlYISFOQ3SI3-CPqOzvI6Abr-h1LQaerC4rxZnEPZd2Y?e=6y861E&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D
+https://upm365-my.sharepoint.com/:v:/g/personal/e_montiel_rios_alumnos_upm_es/IQBxLb4IHfL_TrIWrnJCQ_a5Afw4mXjDTRe6QPeXCdZqYdg?e=7d6Squ&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D
 
 
 ## Features
-**Pantalla de Bienvenida:** Enseña ubicación si se ha dado permiso
-**Navegación Multi-pantalla:** Capacidad para transicionar entre la actividad principal, secundaria y terciaria.
-**Controles Interactivos:** Botones funcionales para avanzar o retroceder en el flujo de la aplicación.
-**Obtener coordenadas GPS** Se obtienen las coordenadas longitud y latitud usando el emulador.
-**Añadir Marcadores Personalizados** Se pueden colocar marcadores en localizaciones personalizadas
-**Configurar Ruta** Se puede configurar una ruta conectando los marcadores
-**Persistencia** Se guardan las coordenadas y los user ids in-app
-**Dialogs and input data** Popups de permisos y ventanas para introducir información
-**Advanced features** Switch para activar tracking de ubicación y, escribir timestamp y altitud
-**Historial de Ruta** Historial de las rutas hechas
-**Navegation Bar** Menu de navegacion en el inferior de la pantalla
+**Login Screen** click "Iniciar Sesion" to type an email. If the email belongs to a registered account it will ask for the password, if not, it will ask for a name and a new password and create an account.
+**Home Screen** First page that you see once you log in. Contains: user logged in at top right corner, button to enter user id and API key, logout button, location widget with toggle for activation, and weather widget with casting and air quality measurements as well as message indicating the safety.
+**Map** Window where you can see your location in a blue marker, and set other markers to create a route of your choice to check the air quality for the route and pick the healthiest option.
+**Route History** Table containing all the locations the app has been used. If you select a location you are brought to an information page for the location, where you can modify it, delete it, or make a report to firebase and save it in the database.
 
 
 ## How to Use
-1.  **Inicio:** Al abrir la aplicación, aterrizarás en la **Página Principal** donde se solicitará permiso a acceder a la ubicación. En el caso de que se de, saldrá por pantalla la longitud y latitud del usuario. Desde esta ventanana principal, podemos acceder al mapa, donde podremos colocar marcadores usando los botones inferiores y crear una ruta. Se puede introducir user id y activar o desactivar location tracking.
-2.  **Navegación:** Pulsa el botón **"GO TO XXXX ACTIVITY"** en la parte superior para cambiar de pantalla, o mediante el menú de navegacion en el inferior de la pantalla
-3.  **Interacción:** En las siguientes pantallas, encontrarás opciones adicionales:
-    * Usa **"GO TO THIRD ACTIVITY"** para avanzar en el flujo.
-    * Usa **"GO TO MAIN ACTIVITY"** para regresar directamente al inicio y reiniciar el ciclo.
+**Login:** Once you open the app you need to log in with an existing email or create an account. This will take you to the **Home Page** where you need to configure the user id by setting the id and an API key for the weather service. Once this is set up, you can click the toggle button on the first widget (location gps) and the app will ask for location access permition. If you give permission, the app will refresh and show the exact location in the first widget, and the weather and air quality measurements in the second widget.
+On the bottom of the screen there is a menu, where you can switch to **MAP** and open the map. From here you can click a location to set a marker, and the app will create a route and show if the air quality is safe or not. You can click clear and the route will reset. 
+You can also go to the history page, from where you can check out all the past locations used on the app, all clickable for more information or modification.
+To leave the app, go to the home page and click "salir" at the top. this will bring you back to the home page
+
 
 ## Participants
 List of MAD developers:
