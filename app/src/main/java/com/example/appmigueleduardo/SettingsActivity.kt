@@ -15,29 +15,22 @@ class SettingsActivity : AppCompatActivity() {
         val editTextUserIdentifier: EditText = findViewById(R.id.editTextUserIdentifier)
         val editTextApiKey: EditText = findViewById(R.id.editTextApiKey)
         val buttonSave: Button = findViewById(R.id.buttonSave)
-
-        // Cargamos las SharedPreferences (AppPreferences es el nombre que usamos en todo el proyecto)
         val sharedPreferences = getSharedPreferences("AppPreferences", Context.MODE_PRIVATE)
-
-        // Rellenar los campos con lo que ya esté guardado (si existe)
         val userIdentifier = sharedPreferences.getString("userIdentifier", "")
         val apiKey = sharedPreferences.getString("API_KEY", "")
-
         editTextUserIdentifier.setText(userIdentifier)
         editTextApiKey.setText(apiKey)
-
         buttonSave.setOnClickListener {
             val newUserIdentifier = editTextUserIdentifier.text.toString()
             val newApiKey = editTextApiKey.text.toString()
-
             if (newUserIdentifier.isNotBlank()) {
                 sharedPreferences.edit().apply {
                     putString("userIdentifier", newUserIdentifier)
                     putString("API_KEY", newApiKey)
-                    apply() // Guarda los cambios
+                    apply()
                 }
                 Toast.makeText(this, "Ajustes guardados: $newUserIdentifier", Toast.LENGTH_LONG).show()
-                finish() // Cierra la pantalla y vuelve a la anterior
+                finish()
             } else {
                 Toast.makeText(this, "El User ID no puede estar vacío", Toast.LENGTH_LONG).show()
             }

@@ -1,6 +1,6 @@
 <resources>
-    <string name="app_name">AppMiguelEduardo</string>
     <string name="signed_in">¡Sesión iniciada!</string>
     <string name="signed_out">¡Sesión cerrada!</string>
     <string name="signed_cancelled">Inicio de sesión cancelado</string>
+    <string name="app_name">BreatheSafe</string>
 </resources>

@@ -4,26 +4,23 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.os.Bundle
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Button
 import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.Switch
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
-import com.example.appmigueleduardo.network.WeatherApiService
-import com.example.appmigueleduardo.network.WeatherResponse
+import com.example.appmigueleduardo.network.*
 import com.example.appmigueleduardo.room.AppDatabase
 import com.example.appmigueleduardo.room.CoordinatesEntity
 import com.firebase.ui.auth.AuthUI
@@ -47,44 +44,33 @@ class MainActivity : AppCompatActivity(), LocationListener {
         var lastSavedLocation: Location? = null
     }
 
+    private var lastClimaData: String = ""
+    private var lastAirData: String = ""
+    private var lastIconUrl: String? = null
+    private var lastPm25: Double = 0.0
+    private var lastAqiValue: Int = 0
+
     private lateinit var locationManager: LocationManager
     private val locationPermissionCode = 2
     private lateinit var locationSwitch: Switch
     private val PREFS_NAME = "AppPreferences"
-
-    private lateinit var weatherTextView: TextView
     private lateinit var weatherIcon: ImageView
-
-    // Elemento para mostrar nombre de Firebase
     private lateinit var userNameTextView: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         overridePendingTransition(0, 0)
         setContentView(R.layout.activity_main)
-
         locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-
-        weatherTextView = findViewById(R.id.weatherTextView)
         weatherIcon = findViewById(R.id.weatherIcon)
         userNameTextView = findViewById(R.id.userNameTextView)
-
-        // Actualizar el nombre de usuario (SharedPreferences y Firebase)
         updateUserDisplay()
         updateUIWithUsername()
-
         locationSwitch = findViewById(R.id.locationSwitch)
         locationSwitch.isChecked = isGpsEnabledSession
-        findViewById<TextView>(R.id.tvLat).text = lastLatSession
-        findViewById<TextView>(R.id.tvLon).text = lastLonSession
-
-        if (isGpsEnabledSession) checkPermissionsAndStartGPS()
-
         locationSwitch.setOnCheckedChangeListener { _, isChecked ->
             isGpsEnabledSession = isChecked
-            if (isChecked) {
-                checkPermissionsAndStartGPS()
-            } else {
+            if (isChecked) checkPermissionsAndStartGPS() else {
                 locationManager.removeUpdates(this)
                 limpiarDatosSesion()
             }
@@ -97,60 +83,137 @@ class MainActivity : AppCompatActivity(), LocationListener {
             when (item.itemId) {
                 R.id.navigation_home -> true
                 R.id.navigation_map -> {
-                    startActivity(Intent(this, OpenStreetMapsActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
-                    })
-                    finish()
-                    true
+                    startActivity(Intent(this, OpenStreetMapsActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) })
+                    finish(); true
                 }
                 R.id.navigation_list -> {
-                    startActivity(Intent(this, SecondActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION)
-                    })
-                    finish()
-                    true
+                    startActivity(Intent(this, SecondActivity::class.java).apply { addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION) })
+                    finish(); true
                 }
                 else -> false
             }
         }
 
-        findViewById<Button>(R.id.userIdentifierButton).setOnClickListener {
-            val intent = Intent(this, SettingsActivity::class.java)
-            startActivity(intent)
-        }
-
-        findViewById<Button>(R.id.btnLogoutManual).setOnClickListener {
-            logout()
-        }
+        findViewById<Button>(R.id.userIdentifierButton).setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
+        findViewById<Button>(R.id.btnLogoutManual).setOnClickListener { logout() }
+        if (isGpsEnabledSession) checkPermissionsAndStartGPS()
     }
 
-    // --- LÓGICA DE FIREBASE AUTH ---
-
-    private fun updateUIWithUsername() {
-        val user = FirebaseAuth.getInstance().currentUser
-        user?.let {
-            val name = it.displayName ?: "No Name"
-            userNameTextView.text = "👤 $name"
+    private fun updateWeatherUI(pm25: Double = lastPm25, aqiInt: Int = lastAqiValue) {
+        lastPm25 = pm25
+        lastAqiValue = aqiInt
+        val (estado, recomendacion) = when {
+            pm25 <= 0.0  -> "--" to ""
+            pm25 <= 12.0 -> "Bueno" to "El aire es limpio. Disfruta de actividades al aire libre."
+            pm25 <= 35.0 -> "Moderado" to "Aire aceptable, pero personas sensibles deben tener precaución."
+            else         -> "Peligroso" to "Nivel elevado. Usa mascarilla y evita ejercicio intenso."
         }
-    }
-
-    private fun logout() {
-        AuthUI.getInstance()
-            .signOut(this)
-            .addOnCompleteListener {
-                // IMPORTANTE: Limpiar tus preferencias locales al cerrar sesión
-                val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                prefs.edit().clear().apply()
-
-                Toast.makeText(this, R.string.signed_out, Toast.LENGTH_SHORT).show()
-                val intent = Intent(this, LoginActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                startActivity(intent)
-                finish()
+        val aqiColor = when {
+            pm25 <= 0.0  -> Color.parseColor("#66FFFFFF")
+            pm25 <= 12.0 -> Color.parseColor("#2ECC71")
+            pm25 <= 35.0 -> Color.parseColor("#F39C12")
+            else         -> Color.RED
+        }
+        runOnUiThread {
+            if (lastClimaData.isNotEmpty()) {
+                val lines = lastClimaData.split("\n")
+                if (lines.size >= 2) {
+                    val cityAndTemp = lines[0]
+                    val city = cityAndTemp.substringBefore(":").trim().uppercase()
+                    val temp = cityAndTemp.substringAfter(":").trim().replace("°C", "°")
+                    val desc = lines[1].replaceFirstChar { it.uppercase() }
+                    findViewById<TextView>(R.id.tvWeatherLocation).text = city
+                    findViewById<TextView>(R.id.tvTemperature).text = temp
+                    findViewById<TextView>(R.id.tvWeatherDesc).text = desc
+                }
             }
+
+            // --- AQI ---
+            val aqiText = if (aqiInt > 0) aqiInt.toString() else "--"
+            findViewById<TextView>(R.id.tvAqiValue).text = aqiText
+
+            // --- PM2.5 ---
+            val pm25Text = if (pm25 > 0.0) String.format("%.2f", pm25) else "--"
+            findViewById<TextView>(R.id.tvPm25).text = pm25Text
+
+            // --- Estado ---
+            findViewById<TextView>(R.id.tvEstado).apply {
+                text = estado
+                setTextColor(aqiColor)
+            }
+
+            findViewById<TextView>(R.id.tvAqiStatus).apply {
+                text = if (pm25 > 0.0) estado else "--"
+                setTextColor(aqiColor)
+            }
+
+            val progress = pm25.coerceAtMost(500.0).toInt()
+            findViewById<ProgressBar>(R.id.aqiProgressBar).apply {
+                this.progress = progress
+                progressTintList = android.content.res.ColorStateList.valueOf(aqiColor)
+            }
+
+            findViewById<TextView>(R.id.weatherTextView).text = recomendacion
+            lastIconUrl?.let { Glide.with(this).load(it).into(weatherIcon) }
+        }
     }
 
-    // --- MENÚ SUPERIOR (LOGOUT) ---
+    override fun onLocationChanged(location: Location) {
+        if (!isGpsEnabledSession) return
+        lastLatSession = String.format("%.4f", location.latitude)
+        lastLonSession = String.format("%.4f", location.longitude)
+        lastSavedLocation = location
+        findViewById<TextView>(R.id.tvLat).text = lastLatSession
+        findViewById<TextView>(R.id.tvLon).text = lastLonSession
+        getWeatherForecast(location.latitude, location.longitude)
+        getAirQuality(location.latitude, location.longitude)
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastSaveTime > 10000) {
+            lastSaveTime = currentTime
+            saveCoordinatesToFile(location.latitude, location.longitude, location.altitude, currentTime)
+            saveCoordinatesToDatabase(location.latitude, location.longitude, location.altitude, currentTime)
+        }
+    }
+
+    private fun getWeatherForecast(lat: Double, lon: Double) {
+        val apiKey = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString("API_KEY", "") ?: ""
+        if (apiKey.isBlank()) return
+        val service = Retrofit.Builder()
+            .baseUrl("https://api.openweathermap.org/data/2.5/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(WeatherApiService::class.java)
+        service.getWeatherForecast(lat, lon, 1, apiKey).enqueue(object : Callback<WeatherResponse> {
+            override fun onResponse(call: Call<WeatherResponse>, response: Response<WeatherResponse>) {
+                response.body()?.list?.firstOrNull()?.let {
+                    lastClimaData = "${it.name}: ${String.format("%.1f", it.main.temp - 273.15)}°C\n${it.weather[0].description}"
+                    lastIconUrl = "https://openweathermap.org/img/wn/${it.weather[0].icon}@4x.png"
+                    updateWeatherUI()
+                }
+            }
+            override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {}
+        })
+    }
+
+    private fun getAirQuality(lat: Double, lon: Double) {
+        val apiKey = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString("API_KEY", "") ?: ""
+        val service = Retrofit.Builder()
+            .baseUrl("https://api.openweathermap.org/data/2.5/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(WeatherApiService::class.java)
+        service.getAirPollution(lat, lon, apiKey).enqueue(object : Callback<AirPollutionResponse> {
+            override fun onResponse(call: Call<AirPollutionResponse>, response: Response<AirPollutionResponse>) {
+                response.body()?.list?.firstOrNull()?.let { airData ->
+                    val pm25Value = airData.components.pm2_5.toDouble()
+                    val aqiValue = airData.main.aqi
+                    lastAirData = "AQI: $aqiValue | PM2.5: $pm25Value μg/m³"
+                    updateWeatherUI(pm25Value, aqiValue)
+                }
+            }
+            override fun onFailure(call: Call<AirPollutionResponse>, t: Throwable) {}
+        })
+    }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.toolbar_menu, menu)
@@ -158,123 +221,80 @@ class MainActivity : AppCompatActivity(), LocationListener {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_logout -> {
-                logout()
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
+        if (item.itemId == R.id.action_logout) logout()
+        return true
+    }
+
+    private fun updateUIWithUsername() {
+        FirebaseAuth.getInstance().currentUser?.let {
+            userNameTextView.text = it.displayName ?: "Usuario"
         }
     }
 
-    // --- RESTO DE TUS FUNCIONES (SIN CAMBIOS) ---
-
-    override fun onResume() {
-        super.onResume()
-        updateUserDisplay()
-        updateUIWithUsername()
+    private fun logout() {
+        AuthUI.getInstance().signOut(this).addOnCompleteListener {
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
+        }
     }
 
     private fun updateUserDisplay() {
-        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val userIdentifier = prefs.getString("userIdentifier", "---")
-        findViewById<TextView>(R.id.tvUser).text = userIdentifier
-    }
-
-    override fun onLocationChanged(location: Location) {
-        if (!isGpsEnabledSession) return
-        lastLatSession = String.format("%.4f", location.latitude)
-        lastLonSession = String.format("%.4f", location.longitude)
-        findViewById<TextView>(R.id.tvLat).text = lastLatSession
-        findViewById<TextView>(R.id.tvLon).text = lastLonSession
-        getWeatherForecast(location.latitude, location.longitude)
-        val currentTime = System.currentTimeMillis()
-        val distance = lastSavedLocation?.distanceTo(location) ?: Float.MAX_VALUE
-        if (currentTime - lastSaveTime > 10000 && distance > 5f) {
-            lastSaveTime = currentTime
-            lastSavedLocation = location
-            saveCoordinatesToFile(location.latitude, location.longitude, location.altitude, currentTime)
-            saveCoordinatesToDatabase(location.latitude, location.longitude, location.altitude, currentTime)
-        }
-    }
-
-    private fun isNetworkAvailable(): Boolean {
-        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val network = connectivityManager.activeNetwork ?: return false
-        val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return activeNetwork.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-    }
-
-    private fun getWeatherForecast(lat: Double, lon: Double) {
-        if (!isNetworkAvailable()) return
-        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val apiKey = prefs.getString("API_KEY", "")
-        if (apiKey.isNullOrBlank()) {
-            weatherTextView.text = "Configura tu API KEY en ajustes"
-            return
-        }
-        val retrofit = Retrofit.Builder()
-            .baseUrl("https://api.openweathermap.org/data/2.5/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-        val service = retrofit.create(WeatherApiService::class.java)
-        val call = service.getWeatherForecast(lat, lon, 1, apiKey)
-        call.enqueue(object : Callback<WeatherResponse> {
-            override fun onResponse(call: Call<WeatherResponse>, response: Response<WeatherResponse>) {
-                if (response.isSuccessful) {
-                    response.body()?.let { showWeatherInfo(it) }
-                }
-            }
-            override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {
-                Log.e("MainActivity", "Error fetching weather: ${t.message}")
-            }
-        })
-    }
-
-    private fun showWeatherInfo(weatherResponse: WeatherResponse) {
-        val item = weatherResponse.list.firstOrNull()
-        if (item != null) {
-            val tempCelsius = item.main.temp - 273.15
-            val tempFormatted = String.format("%.1f", tempCelsius)
-            weatherTextView.text = "${item.name}: $tempFormatted°C\n${item.weather[0].description}"
-            val iconUrl = "https://openweathermap.org/img/wn/${item.weather[0].icon}@4x.png"
-            Glide.with(this).load(iconUrl).into(weatherIcon)
-        }
-    }
-
-    private fun saveCoordinatesToDatabase(latitude: Double, longitude: Double, altitude: Double, timestamp: Long) {
-        val coordinates = CoordinatesEntity(timestamp, latitude, longitude, altitude)
-        val db = AppDatabase.getDatabase(this)
-        lifecycleScope.launch {
-            db.coordinatesDao().insert(coordinates)
-        }
+        val identifier = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString("userIdentifier", "--") ?: "--"
+        findViewById<TextView>(R.id.tvUser).text = identifier
     }
 
     private fun limpiarDatosSesion() {
-        lastLatSession = "---"
-        lastLonSession = "---"
-        findViewById<TextView>(R.id.tvLat).text = "---"
-        findViewById<TextView>(R.id.tvLon).text = "---"
-        lastSavedLocation = null
-        lastSaveTime = 0
+        lastClimaData = ""
+        lastAirData = ""
+        lastPm25 = 0.0
+        lastAqiValue = 0
+        lastIconUrl = null
+        findViewById<TextView>(R.id.tvLat).text = "--"
+        findViewById<TextView>(R.id.tvLon).text = "--"
+        findViewById<TextView>(R.id.tvWeatherLocation).text = ""
+        findViewById<TextView>(R.id.tvTemperature).text = "--°"
+        findViewById<TextView>(R.id.tvWeatherDesc).text = ""
+        findViewById<TextView>(R.id.tvAqiStatus).text = "--"
+        findViewById<TextView>(R.id.tvAqiStatus).setTextColor(Color.parseColor("#66FFFFFF"))
+        findViewById<TextView>(R.id.tvAqiValue).text = "--"
+        findViewById<TextView>(R.id.tvPm25).text = "--"
+        findViewById<TextView>(R.id.tvEstado).text = "--"
+        findViewById<TextView>(R.id.tvEstado).setTextColor(Color.parseColor("#66FFFFFF"))
+        findViewById<TextView>(R.id.weatherTextView).text = ""
+        findViewById<ProgressBar>(R.id.aqiProgressBar).progress = 0
+        weatherIcon.setImageDrawable(null)
     }
 
-    private fun saveCoordinatesToFile(latitude: Double, longitude: Double, altitude: Double, timestamp: Long) {
-        val file = File(filesDir, "gps_coordinates.csv")
-        file.appendText("$timestamp; ${String.format("%.4f", latitude)}; ${String.format("%.4f", longitude)}; ${String.format("%.2f", altitude)}\n")
-    }
-
-    private fun checkPermissionsAndStartGPS() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), locationPermissionCode)
-        } else {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5f, this)
+    private fun saveCoordinatesToDatabase(lat: Double, lon: Double, alt: Double, time: Long) {
+        lifecycleScope.launch {
+            AppDatabase.getDatabase(this@MainActivity).coordinatesDao().insert(
+                CoordinatesEntity(time, lat, lon, alt)
+            )
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == locationPermissionCode && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+    private fun saveCoordinatesToFile(lat: Double, lon: Double, alt: Double, time: Long) {
+        File(filesDir, "gps_coordinates.csv").appendText("$time; $lat; $lon; $alt\n")
+    }
+
+    private fun checkPermissionsAndStartGPS() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 5f, this)
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                locationPermissionCode
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(req: Int, perms: Array<out String>, grants: IntArray) {
+        super.onRequestPermissionsResult(req, perms, grants)
+        if (req == locationPermissionCode && grants.isNotEmpty() && grants[0] == PackageManager.PERMISSION_GRANTED) {
             checkPermissionsAndStartGPS()
         }
     }

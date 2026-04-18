@@ -1,11 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.AppMiguelEduardo" parent="Theme.AppCompat.Light.NoActionBar">
+
+    <style name="Theme.BreatheSafe" parent="Theme.AppCompat.Light.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-
-        <item name="colorPrimary">#6200EE</item>
-        <item name="colorPrimaryDark">#3700B3</item>
-        <item name="colorAccent">#03DAC5</item>
+        <item name="colorPrimary">#009688</item>
+        <item name="colorPrimaryDark">#00796B</item>
+        <item name="colorAccent">#4DD0E1</item>
     </style>
+
+    <style name="Theme.BreatheSafe.Auth" parent="Theme.AppCompat.Light.Dialog">
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:windowMinWidthMajor">85%</item>
+        <item name="android:windowMinWidthMinor">85%</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="colorPrimary">#009688</item>
+        <item name="colorAccent">#009688</item>
+        <item name="android:textColorPrimary">#009688</item>
+        <item name="android:textColorSecondary">#000000</item>
+        <item name="android:editTextColor">#000000</item>
+        <item name="materialButtonStyle">@style/Widget.BreatheSafe.Button</item>
+    </style>
+
+    <style name="Widget.BreatheSafe.Button" parent="Widget.MaterialComponents.Button">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:background">@drawable/bg_button_rounded</item>
+        <item name="backgroundTint">#009688</item>
+        <item name="android:textColor">@android:color/white</item>
+    </style>
+
 </resources>
